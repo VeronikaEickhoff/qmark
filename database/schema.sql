@@ -112,6 +112,22 @@ $$;
 ALTER FUNCTION public.question_total_bounty(question question) OWNER TO anselm;
 
 --
+-- Name: trigger_questions_changed(); Type: FUNCTION; Schema: public; Owner: anselm
+--
+
+CREATE FUNCTION trigger_questions_changed() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM pg_notify('questions_changed', (SELECT json_object_agg("id", "title")::varchar FROM question));
+  RETURN NEW;
+END
+$$;
+
+
+ALTER FUNCTION public.trigger_questions_changed() OWNER TO anselm;
+
+--
 -- Name: user; Type: TABLE; Schema: public; Owner: anselm
 --
 
@@ -351,6 +367,13 @@ ALTER TABLE ONLY "user"
 
 ALTER TABLE ONLY "user"
     ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: question questions_changed; Type: TRIGGER; Schema: public; Owner: anselm
+--
+
+CREATE TRIGGER questions_changed AFTER INSERT OR DELETE OR UPDATE ON question FOR EACH STATEMENT EXECUTE PROCEDURE trigger_questions_changed();
 
 
 --
