@@ -19,7 +19,6 @@ def _get_question_ids_redis(redis_client):
 
 
 def _save_csr_matrix_redis(redis_client, csr_matrix):
-
     """Save matrix components in Redis (vectorizer, vectorized matrix, transformer and tfidf_matrix)"""
 
     redis_client.set('data', csr_matrix.data.tostring())
@@ -30,7 +29,6 @@ def _save_csr_matrix_redis(redis_client, csr_matrix):
 
 
 def _get_csr_matrix_redis(redis_client):
-
     """Compose csr matrix from its components in Redis"""
 
     data = np.fromstring(redis_client.get('data'), dtype=float)
@@ -42,13 +40,38 @@ def _get_csr_matrix_redis(redis_client):
     return csr_matrix((data, indices, indptr), shape=(shape1, shape2), dtype=float)
 
 
-def recompute_model(question_ids, question_texts):
+from pattern.text.en import parsetree
+from pattern.en import tag
 
+
+def preprocess_text(text):
+    lemmata_text = " ".join(
+        map(lambda sentence: " ".join(sentence.lemmata), parsetree(text, lemmata=True).sentences))
+    tagged_terms = tag(lemmata_text)
+
+    filtered_terms = \
+        map(lambda term_tag: term_tag[0],
+            filter(lambda term_tag:
+                   (term_tag[1] == "NN" or term_tag[1] == "VB" or term_tag[1] == "NNP-LOC"
+                    or term_tag[1] == "FW" or term_tag[1] == "NNP" or term_tag[1] == "NNS"),
+                   tagged_terms))
+
+    if len(filtered_terms) == 0:
+        return lemmata_text
+    return " ".join(filtered_terms)
+
+#
+# print preprocess_text(
+# "Former President of the Philippines Corazon Aquino dies at the age of 76 of cardiopulmonary arrest after complications of colon cancer. A memorial service and funeral is scheduled for August 5. (Philippine Daily Inquirer)")
+
+def recompute_model(question_ids, question_texts):
     redis_client = rc()
 
     _save_question_ids_redis(question_ids, redis_client)
 
-    vectorizer = HashingVectorizer(n_features=100)
+    question_texts = map(lambda text: preprocess_text(text), question_texts)
+
+    vectorizer = HashingVectorizer(n_features=1000000)
     vectorized_matrix = vectorizer.transform(question_texts)
     transformer = TfidfTransformer()
     tfidf = transformer.fit_transform(vectorized_matrix)
@@ -59,11 +82,11 @@ def recompute_model(question_ids, question_texts):
 
 
 def update_model(new_question_text, redis_client):
-
     vectorizer = cPickle.loads(redis_client.get('vectorizer'))
     transformer = cPickle.loads(redis_client.get('transformer'))
     tfidf = _get_csr_matrix_redis(redis_client)
 
+    new_question_text = preprocess_text(new_question_text)
     new_question_vectorized = vectorizer.transform([new_question_text])
     new_question_tfidf = transformer.transform(new_question_vectorized)
     tfidf = vstack((tfidf, new_question_tfidf))
@@ -74,18 +97,19 @@ def update_model(new_question_text, redis_client):
 
 
 def find_similar(new_question_text):
-
     redis_client = rc()
 
     tfidf = update_model(new_question_text, redis_client)
     new_question_vector = (tfidf[-1]).toarray()
 
-    similarity_scores = np.transpose(tfidf.dot(np.transpose(new_question_vector)))
+    similarity_scores = np.transpose(tfidf.dot(np.transpose(new_question_vector)))[0]
 
-    print similarity_scores
+    question_ids = _get_question_ids_redis(redis_client)
+    return sorted(zip(question_ids, similarity_scores[:-1]), key=lambda x: -x[1])[:10]
 
-# 
+
 # rc().flushall()
+
 # questions = ["How Trump became the president", "Trump is a president", "Putin eats kids"]
 # recompute_model(["q1", "q2", "q3"], questions)
 #
@@ -93,5 +117,13 @@ def find_similar(new_question_text):
 # find_similar(new_question)
 
 
+with open("headlines.txt") as f :
+    questions = f.readlines()
 
+questions = [x.strip() for x in questions]
+ids = map(lambda x: str(x), range(0, len(questions)))
 
+recompute_model(ids, questions)
+
+new_question = "Will Putin be win the next presidential elections in Russia?"
+print find_similar(new_question)
