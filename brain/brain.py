@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer, H
 import redis
 
 
-def rc():
+def createRedisClient():
     return redis.StrictRedis(host='localhost', port=6379, db=0)
 
 
@@ -64,14 +64,14 @@ def preprocess_text(text):
 # print preprocess_text(
 # "Former President of the Philippines Corazon Aquino dies at the age of 76 of cardiopulmonary arrest after complications of colon cancer. A memorial service and funeral is scheduled for August 5. (Philippine Daily Inquirer)")
 
-def recompute_model(question_ids, question_texts):
-    redis_client = rc()
+def recompute_model(question_ids, question_texts, redis_client, n_features=100000):
+    # redis_client = rc()
 
     _save_question_ids_redis(question_ids, redis_client)
 
     question_texts = map(lambda text: preprocess_text(text), question_texts)
 
-    vectorizer = HashingVectorizer(n_features=1000000)
+    vectorizer = HashingVectorizer(n_features=n_features)
     vectorized_matrix = vectorizer.transform(question_texts)
     transformer = TfidfTransformer()
     tfidf = transformer.fit_transform(vectorized_matrix)
@@ -96,8 +96,11 @@ def update_model(new_question_text, redis_client):
     return tfidf
 
 
-def find_similar(new_question_text):
-    redis_client = rc()
+def find_similar(new_question_text, redis_client, topN=5):
+    """
+        return a list of IDs
+    """
+    # redis_client = rc()
 
     tfidf = update_model(new_question_text, redis_client)
     new_question_vector = (tfidf[-1]).toarray()
@@ -105,7 +108,7 @@ def find_similar(new_question_text):
     similarity_scores = np.transpose(tfidf.dot(np.transpose(new_question_vector)))[0]
 
     question_ids = _get_question_ids_redis(redis_client)
-    return sorted(zip(question_ids, similarity_scores[:-1]), key=lambda x: -x[1])[:10]
+    return map(lambda x: x[0], sorted(zip(question_ids, similarity_scores[:-1]), key=lambda x: -x[1])[:topN])
 
 
 # rc().flushall()
@@ -117,13 +120,13 @@ def find_similar(new_question_text):
 # find_similar(new_question)
 
 
-with open("headlines.txt") as f :
-    questions = f.readlines()
+# with open("headlines.txt") as f :
+#     questions = f.readlines()
 
-questions = [x.strip() for x in questions]
-ids = map(lambda x: str(x), range(0, len(questions)))
+# questions = [x.strip() for x in questions]
+# ids = map(lambda x: str(x), range(0, len(questions)))
 
-recompute_model(ids, questions)
+# recompute_model(ids, questions)
 
-new_question = "Will Putin be win the next presidential elections in Russia?"
-print find_similar(new_question)
+# new_question = "Will Putin be win the next presidential elections in Russia?"
+# print find_similar(new_question)
