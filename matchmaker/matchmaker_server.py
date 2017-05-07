@@ -21,7 +21,10 @@ def next_article_id():
     """
     cur = conn.cursor()
     cur.execute(query)
-    return int(cur.fetchall()[0][0]) + 1
+    old = cur.fetchall()[0][0]
+    if old is None:
+        old = "0"
+    return int(old) + 1
 
 def get_question_title(qid):
     query = """
@@ -36,6 +39,15 @@ def insert_new_article(article_id, article_title, writer_id):
     query = """
         insert into article values (%i, '%s', null, %i);
     """ % (article_id, article_title.replace('\'', '\\\''), writer_id)
+    print "Executing:", query
+    cur = conn.cursor()
+    cur.execute(query)
+
+
+def update_question_response(qid, article_id):
+    query = """
+        update question set response_id=%i where id=%i;
+    """ % (article_id, qid)
     print "Executing:", query
     cur = conn.cursor()
     cur.execute(query)
@@ -58,10 +70,12 @@ def choose_writer(qid):
     print "New article title is", article_title
     #TODO insert new article into the DB
     insert_new_article(article_id, article_title, writer_id)
+    update_question_response(qid, article_id)
     conn.commit()
 
 
 def booking_hook(qid, sleepSecs=5):
+    print "Sleeping for %i seconds..." % sleepSecs
     sleep(sleepSecs)
     choose_writer(qid)
 
@@ -73,9 +87,9 @@ def book():
         print 'qid is not provided'
         return ""
     qid = int(qid)
-    cat = posted.get('category')
+    cat = posted.get('cat')
     if cat is None:
-        print 'category is not provided'
+        print 'cat is not provided'
         return ""
     cat = int(qid)
     Process(target=booking_hook, args=(qid,)).start()

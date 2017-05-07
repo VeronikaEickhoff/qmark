@@ -1,0 +1,13 @@
+CREATE OR REPLACE FUNCTION trigger_new_apply() RETURNS TRIGGER AS $$
+    DECLARE
+	cnt INTEGER;
+	cat INTEGER;
+    BEGIN
+	cnt := count_applications(NEW.question_id);
+	IF (cnt = 0) THEN
+            cat := urgency from question where id=NEW.question_id group by urgency;
+	    PERFORM pg_notify('new_apply', json_build_object('qid', NEW.question_id, 'cat', cat)::varchar);
+	END IF;
+        RETURN NEW;
+    END;
+$$ LANGUAGE plpgsql;

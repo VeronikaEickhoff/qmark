@@ -108,9 +108,35 @@ def find_similar(new_question_text, redis_client, topN=5):
     similarity_scores = np.transpose(tfidf.dot(np.transpose(new_question_vector)))[0]
 
     question_ids = _get_question_ids_redis(redis_client)
-    return map(lambda x: x[0], sorted(zip(question_ids, similarity_scores[:-1]), key=lambda x: -x[1])[:topN])
+    filteredIdScores = filter(lambda idScore: idScore[1] > 0, zip(question_ids, similarity_scores[:-1]))
+    return map(lambda x: x[0], sorted(filteredIdScores, key=lambda x: -x[1]))[:topN]
 
 
+def main():
+
+    with open('final_headlines.txt', 'r') as inp:
+        lines = inp.readlines()
+    qs = [x.strip() for x in lines]
+    ids = map(lambda x: str(x), range(0, len(qs)))
+    redis_client = createRedisClient()
+    redis_client.flushall()
+    print "Computing the similarity model..."
+    recompute_model(ids, qs, redis_client)
+    while True:
+        print ""
+        print "Type a query text or exit:"
+        q = raw_input()
+        if q == 'exit':
+            break
+        print "Similar queries:"
+        similar_ids = find_similar(q, redis_client, topN=10)
+        print similar_ids
+        similar_qs = map(lambda i: qs[int(i)], similar_ids)
+        for similar_q in similar_qs:
+            print similar_q
+
+if __name__ == "__main__":
+    main()
 # rc().flushall()
 
 # questions = ["How Trump became the president", "Trump is a president", "Putin eats kids"]
