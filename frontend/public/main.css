@@ -1,0 +1,132 @@
+body {
+    font-family: 'Source Sans Pro', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #222;
+}
+
+.container {
+    display: flex;
+    flex-flow: column wrap;
+    flex-direction: row;
+    justify-content: center;
+    align-content: stretch;
+}
+
+.question {
+    position: relative;
+    min-height: 20rem;
+    flex-basis: calc(33% - 2rem);
+    max-width: 33.3%;
+    flex-grow: 1;
+    background-color: #333;
+    color: #fff;
+    padding: 1rem;
+}
+
+.question .bg {
+    display: block;
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-size: cover;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.timeline {
+    position: absolute;
+    bottom: 0;
+    left: 1rem;
+    right: 1rem;
+    display: flex;
+    flex-direction: row;
+    
+}
+
+.timeline div {
+    font-size: 1.2em;
+    flex-grow: 1;
+    height: 1.5em;
+    border-top: 1px solid #fff;
+    text-align: center;
+    position: relative;
+}
+
+.timeline div::after {
+    display: block;
+    content: '';
+    position: absolute;
+    top: -3px;
+    right: -2px;
+    width: 5px;
+    height: 5px;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+button {
+    font-family: 'Source Sans Pro', sans-serif;
+    background: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    font-size: 1em;
+    padding: 0.5em;
+    border-radius: 3px;
+    display: block;
+    margin: 1rem auto;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #fff;
+    color: #000;
+}
+
+.hugeButton {
+    width: 50%;
+    height: 2em;
+    float: left;
+    margin: 0;
+    border-radius: 0;
+    font-size: 2em;
+}
+
+.hugeButton:nth-of-type(1) {
+    border-left: none;
+    border-top: none;
+}
+
+.hugeButton:nth-of-type(2) {
+    border-right: none;
+    border-top: none;
+}
+
+.hugeButton:nth-of-type(3) {
+    border-left: none;
+    border-bottom: none;
+}
+
+.hugeButton:nth-of-type(4) {
+    border-right: none;
+    border-bottom: none;
+}
+
+.hugeButton.single {
+    float: none;
+    margin: 1em auto;
+    font-size: 1.1;
+    border-radius: 3px;
+    border: 1px solid #fff !important;
+}
+
+.input {
+    display: block;
+    font-family: 'Source Sans Pro', sans-serif;
+    background: transparent;
+    color: #fff;
+    font-size: 2em;
+    width: calc(100% - 1em);
+    padding: 0.5em;
+    outline: none;
+}

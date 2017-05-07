@@ -1,0 +1,1 @@
+postgraphql -c postgres://anselm@localhost:5432/qmark --export-schema-json data/schema.json --classic-ids

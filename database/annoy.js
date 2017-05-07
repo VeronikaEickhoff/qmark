@@ -11,15 +11,15 @@ pg.connect(pgConString, function(err, client) {
     console.log(msg);
     let postData = msg.payload;
     const options = {
-      hostname: '192.168.28.197',
-      port: 5000,
-      path: '/update/',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
-      }
-    };
+        hostname: '192.168.28.197',
+        port: msg.channel === "questions_changed" ? 5000 : 5001,
+        path: msg.channel === "questions_changed" ? '/update/' : '/book/',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
 
     const req = http.request(options);
     req.on('error', (e) => {
@@ -30,4 +30,5 @@ pg.connect(pgConString, function(err, client) {
     req.end();
   });
   var query = client.query("LISTEN questions_changed");
+  var query = client.query("LISTEN new_apply");
 });
